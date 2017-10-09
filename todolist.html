@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+      *{ margin: 0; padding: 0; }
+       #app{width:800px;margin: 30px auto;}
+       h3{margin:10px;}
+       li{list-style:none; line-height:30px;margin:5px;padding: 5px;border-bottom:1px solid #ccc;}
+       li:hover{background:#E0EEE0;}
+       .active{background:#E0EEE0;}
+       strong{text-align:center;}
+       span{display:inline-block;float:right;cursor: pointer}
+       .lineStyle{text-decoration:line-through;color:#f90;}
+       li input[type=text]{display:none;}
+      li.editor input[type=text]{display:inline-block;}
+      li.editor strong{display:none;}
+      .info{height:40px;margin-top:5px;}
+      a{display:inline-block;float:left;margin-left:5px;width:80px;line-height:30px; background:#ddd;text-decoration:none;padding: 5px;color:#000;}
+      .aactive{
+          background: #f90;
+      }
+      .input{
+          padding:4px;
+          border-radius: 4px;
+          border:1px solid #ccc;
+      }
+    </style>
+    <script src="http://libs.cdnjs.net/vue/2.3.4/vue.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h2>任务列表</h2>
+        <h3>新增任务</h3>
+        <input type="text" class="input" placeholder="填写任务按enter" @keyup.enter="add" v-model="content">
+        <div class="info">
+            已完成 <strong>{{checkNum}}</strong>个任务
+            未完成 <strong>{{uncheckNum}}</strong>个任务
+            <p style="width:45%;float:right"><a href="#allData" :class="{aactive:visibleStatus == 'allData' }">所有任务</a><a :class="{aactive:visibleStatus == 'uncheckData' }" href="#uncheckData">未完成任务</a><a href="#checkData" :class="{aactive:visibleStatus == 'checkData' }">已完成任务</a></p>
+        </div>
+
+        <ul id="list" v-if="filterList.length > 0">          
+            <li v-for="(item,index) in filterList" :class="{active:item.checked,editor:item == curEditotitem}">
+               <input type="checkbox" v-model="item.checked">
+               <strong :class={lineStyle:item.checked} @dblclick="editor(item)" >{{ item.cont }}</strong>
+               <input type="text" v-model="item.cont" @blur="editorFinished(item)" @keyup.enter="editorFinished(item)" @keyup.esc="cancel(item)">
+               <span @click="removeItem(index)">X</span></li>
+            </li>
+        </ul>
+        <div style="text-align:center;margin-top:40px;" v-else>
+                暂无任务
+        </div>
+    </div>
+    <script>
+        //定义一个对象用来操作本地数据存储的
+        var localstoreData = {
+            save:function(key,value){
+                localStorage.setItem(key,JSON.stringify(value))
+            },
+            fetch:function(key){
+                return JSON.parse(localStorage.getItem(key)) || [];
+            }
+        }
+
+        var list = localstoreData.fetch('listData');
+
+
+        var vm = new Vue({
+            el:'#app',
+            data:{
+                content:'',  //编辑的内容
+                curEditotitem:'', //正在编辑的内容,
+                prevCont:'', //编辑内容前的文本数据 
+                list:list,
+                visibleStatus:"allData"
+            },
+            methods:{
+                add(){
+                   this.list.push({
+                       cont:this.content,
+                       checked:false
+                   });
+                   this.content = '';         
+                },
+                editor(item){
+                    this.prevCont = item.cont;
+                    this.curEditotitem = item;
+                },
+                editorFinished(item){
+                    this.curEditotitem = '';
+                },
+                cancel(item){
+                    item.cont = this.prevCont;
+                    this.curEditotitem = '';
+                },
+                removeItem(index){
+                    if(confirm('你确定要删除这个任务吗')){
+                        this.list.splice(index,1);
+                    }
+                }
+              
+            },
+            computed:{
+                checkNum:function(){
+                    return this.list.filter(function(item){
+                        return item.checked
+                    }).length;
+                },
+                uncheckNum:function(){
+                    return this.list.filter((item)=>{
+                        return !item.checked
+                    }).length
+                },
+                filterList(){
+                    var filterObj = {
+                        allData(){
+                            return list;
+                        },
+                        uncheckData(){
+                            return list.filter(function(item){
+                                return !item.checked;
+                            })
+                        },
+                        checkData(){
+                            return list.filter(function(item){
+                                return item.checked;
+                            })
+                        }
+                    }
+                    return filterObj[this.visibleStatus](list)
+                }
+            },
+            watch:{
+                list:{
+                    handler:function(){
+                        localstoreData.save('listData',this.list);
+                    },
+                    deep:true,
+                }
+            }
+        })
+
+        window.addEventListener("hashchange",function(){
+            var  hashVal=window.location.hash.substring(1);  //获取#后的hash值
+
+            vm.visibleStatus=hashVal;
+        })
+
+
+       
+    </script>
+</body>
+</html>
